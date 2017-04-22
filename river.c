@@ -19,6 +19,9 @@ int leastplankRotations(char* filename)
     }
     fscanf(readptr, "%d", &numberofRows);
     fscanf(readptr, "%d", &numberofColumns);
+    
+    //printf("NumberofRows: %d NumberofColumn: %d\n", numberofRows, numberofColumns);
+
     int** plankData = openFile(readptr, numberofRows, numberofColumns);
 
     freeData(plankData, numberofRows, numberofColumns);
@@ -32,7 +35,7 @@ int** openFile(FILE* fptr, int numberofRows, int numberofColumns)
     int** plankData;
     int i;
     int j;
-
+    char temp;
     // mallocs for the array
     
     plankData = malloc(numberofRows * sizeof(int*));
@@ -47,13 +50,19 @@ int** openFile(FILE* fptr, int numberofRows, int numberofColumns)
     {
         for(j = 0; j < numberofColumns; j++)
         {
-            if(!fscanf(fptr, "%d", &plankData[i][j]))
+            fscanf(fptr, "%c", &temp);
+            if(temp != '\n')
             {
-                break;
-                printf("%d ",plankData[i][j]); //Uncomment to print the matrix (FOR TESTING)
+                plankData[i][j] = temp;
+                plankData[i][j] -= 48;
+                //printf("%d ",plankData[i][j]); //Uncomment to print the matrix (FOR TESTING)
+            }
+            else
+            {
+                j--;
             }
         }
-        printf("\n"); //Uncomment to print the matrix (FOR TESTING)
+        //printf("\n"); //Uncomment to print the matrix (FOR TESTING)
     }
 
     // Fills the last row with 0 since it can have no planks
@@ -61,9 +70,9 @@ int** openFile(FILE* fptr, int numberofRows, int numberofColumns)
     for(j = 0; j < numberofColumns; j++)
     {
         plankData[numberofRows - 1][j] = 0;
-        printf("%d ",plankData[numberofRows - 1][j]); //Uncomment to print the matrix (FOR TESTING)
+        //printf("%d ",plankData[numberofRows - 1][j]); //Uncomment to print the matrix (FOR TESTING)
     }
-    printf("\n");
+    //printf("\n");
     return plankData;
 }
 
