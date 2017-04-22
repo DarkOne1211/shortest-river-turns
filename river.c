@@ -14,6 +14,9 @@ int leastplankRotations(char* filename)
     int i;
     int j;
     int counter = 0;
+    int numberofTurns = 0;
+
+    // OPENING A FILE
     FILE* readptr = fopen(filename, "r");
     if(readptr == NULL)
     {
@@ -25,7 +28,7 @@ int leastplankRotations(char* filename)
     
     //printf("NumberofRows: %d NumberofColumn: %d\n", numberofRows, numberofColumns);
 
-    int** plankData = openFile(readptr, numberofRows, numberofColumns); // LAODING THE INPUT FILE INTO A MARTIX
+    int** plankData = openFile(readptr, numberofRows, numberofColumns); // LOADING THE INPUT FILE INTO A MATRIX
     // --------------------------------------- TEST --------------------------------------------------------------
     /*for(i = 0; i < numberofRows; i++)
     {
@@ -53,7 +56,7 @@ int leastplankRotations(char* filename)
     freeGraph(plankGraph);
     freeData(plankData, numberofRows, numberofColumns);
     fclose(readptr);
-    return 0;
+    return numberofTurns;
 }
 
 // FUNCTION TO COPY DATA FROM FILE INTO A MATRIX
@@ -128,7 +131,7 @@ Graph* createGraph(int V)
 {
     Graph* newGraph = malloc(sizeof(Graph));
     newGraph->vertex = V;
-
+    newGraph->isJaneon = 0;
     newGraph->array = malloc(V * sizeof(AdjList));
     
     // Initializing each array element as NULL in the graph
