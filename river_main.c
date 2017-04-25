@@ -10,6 +10,6 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
     int length = leastplankRotations(argv[1]);
-    printf("Length: %d\n", length);
+    printf("%d\n", length);
     return EXIT_SUCCESS;
 }
