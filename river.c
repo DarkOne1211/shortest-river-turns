@@ -1,11 +1,12 @@
 #include "river.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <limits.h>
 
 // FUNCTION DECLARATIONS
 int** openFile(FILE* fptr, int numberofRows, int numberofColumns);
 void freeData(int** plankData,int numberofRows, int numberofColumns);
-int findNumberofRotations(int** plankData, int numberofRows, int numberofColumns, FILE* fptr);
+int findNumberofRotations(int** plankData, int numberofRows, int numberofColumns);
 
 // FUNCTION DEFINIIONS
 int leastplankRotations(char* filename)
@@ -30,7 +31,7 @@ int leastplankRotations(char* filename)
     //printf("NumberofRows: %d NumberofColumn: %d\n", numberofRows, numberofColumns);
 
     int** plankData = openFile(readptr, numberofRows, numberofColumns); // LOADING THE INPUT FILE INTO A MATRIX
-    numberofTurns = findNumberofRotations(plankData, numberofRows, numberofColumns, readptr);
+    numberofTurns = findNumberofRotations(plankData, numberofRows, numberofColumns);
     freeData(plankData, numberofRows, numberofColumns);
     fclose(readptr);
     return numberofTurns;
@@ -94,8 +95,141 @@ void freeData(int** plankData,int numberofRows, int numberofColumns)
     free(plankData);
 }
 
-void findjaneinitalpos(int** plankData, int* Xpos, int* Ypos, int* turns, int rows, int columns)
+// Graph functions
+// Creating a new Adjecent List node
+AdjListNode* newAdjListNode(int dest)
 {
+    AdjListNode* newNode = malloc(sizeof(AdjListNode));
+    newNode->adjecent = dest;
+    newNode->next = NULL;
+    return newNode;
+}
+
+// Creating a new Graph
+Graph* createGraph(int V)
+{
+    Graph* newGraph = malloc(sizeof(Graph));
+    newGraph->vertex = V;
+
+    newGraph->array = malloc(V * sizeof(AdjList));
+    
+    // Initializing each array element as NULL in the graph
+    int AdjListCounter = 0;
+    for(AdjListCounter = 0; AdjListCounter < V; AdjListCounter++)
+    {
+        newGraph->array[AdjListCounter].head = NULL;
+    }
+    return newGraph;
+}
+
+void insertEdge(Graph* graph, int src, int dest)
+{
+    // Add an edge that points from source to destination or <u,v>
+    AdjListNode* newNode = newAdjListNode(dest);
+    newNode->next = graph->array[src].head;
+    graph->array[src].head = newNode;
+
+    // UNCOMMENT IF YOU WANT THE GRAPH TO BE UNDIRECTIONAL
+    /*newNode = newAdjListNode(src);
+    newNode->next = graph->array[dest].head;
+    graph->array[dest].head = newNode;*/
+}
+
+
+void freeGraph(Graph* freeGraph)
+{
+    int vertex = 0;
+    for(vertex = 0; vertex < freeGraph->vertex; vertex++)
+    {
+        while(freeGraph->array[vertex].head != NULL)
+        {
+            AdjListNode* temp = freeGraph->array[vertex].head;
+            freeGraph->array[vertex].head = temp->next;
+            free(temp);
+        }
+    }
+    free(freeGraph->array);
+    free(freeGraph);
+
+}
+
+// Printing the graph. CREATED FOR TESTING PURPOSES
+//-------------------- TEST-------------------------
+void printGraph(Graph* graph)
+{
+    int v;
+    for (v = 0; v < graph->vertex; ++v)
+    {
+        struct AdjListNode* pCrawl = graph->array[v].head;
+        printf("\n Adjacency list of vertex %d\n head ", v);
+        while (pCrawl)
+        {
+            printf("-> %d", pCrawl->adjecent);
+            pCrawl = pCrawl->next;
+        }
+        printf("\n");
+    }
+}
+//-----------------------TEST------------------------
+
+// STACK OPERATIONS
+
+void push(stack* S)
+{
+    S->top += 1;
+    S->vertices[S->top] = 1;
+}
+
+void pop(stack* S)
+{
+    S->top -= 1;
+}
+
+int getNumberofVertices(int** plankData, int rows, int columns)
+{
+    int numberofVertices = 0;
+    int i;
+    int j;
+    stack vertexCreate;
+    vertexCreate.vertices = malloc(sizeof(int)*rows*columns);
+    vertexCreate.top = -1;
+    vertexCreate.MAXSIZE = rows*columns;
+    
+    for(i = 0; i < columns; i++)
+    {
+        for(j = 0; j < rows; j++)
+        {
+            if(plankData[j][i] == 1)
+            {
+                push(&vertexCreate);
+            }
+            else
+            {
+                if(vertexCreate.top != -1)
+                {
+                    while(vertexCreate.top != -1)
+                    {
+                        pop(&vertexCreate);
+                    }
+                    numberofVertices++;
+                }
+            }
+        }
+    }
+    free(vertexCreate.vertices);
+    return numberofVertices;
+}
+
+void setVertexData(VertexData* vdata, int** plankData, int rows, int columns)
+{
+    stack vertexCreate;
+    vertexCreate.vertices = malloc(sizeof(int)*rows*columns);
+    vertexCreate.top = -1;
+    vertexCreate.MAXSIZE = rows*columns;
+    int rowStart = 0;
+    int colStart = 0;
+    int rowEnd = 0;
+    int colEnd = 0;
     int i;
     int j;
     for(i = 0; i < columns; i++)
@@ -104,226 +238,73 @@ void findjaneinitalpos(int** plankData, int* Xpos, int* Ypos, int* turns, int ro
         {
             if(plankData[j][i] == 1)
             {
-                *Xpos = i;
-                *Ypos = j;
-                *turns = 2 * i;
-                return;
-            }
-        }
-    }
-}
-
-int checkUp(int** plankData, int rowPos, int colPos, int rows, int columns)
-{
-    if(rowPos - 1 < 0)
-    {
-        return 0;
-    }
-    else if(plankData[rowPos - 1][colPos] == 1)
-    {
-        return 1;
-    }
-    else
-    {
-        return 0;
-    }
-}
-
-int checkDown(int** plankData, int rowPos, int colPos, int rows, int columns)
-{
-    if((rowPos + 1) >= rows)
-    {
-        return 0;
-    }
-    else if(plankData[rowPos + 1][colPos] == 1)
-    {
-        return 1;
-    }
-    else
-    {
-        return 0;
-    }
-}
-
-int checkLeft(int** plankData, int rowPos, int colPos, int rows, int columns)
-{
-    if(colPos - 1 < 0 || rowPos >= rows || rowPos <= 0)
-    {
-        return 0;
-    }
-    else if(plankData[rowPos][colPos - 1] == 1)
-    {
-        return 1;
-    }
-    else if(plankData[rowPos - 1][colPos - 1] == 1)
-    {
-        return 1;
-    }
-    else if(plankData[rowPos + 1][colPos - 1] == 1)
-    {
-        return 1;
-    }
-    else
-    {
-        return 0;
-    }
-
-}
-void moveUp(int** plankData,int* rowPos,int* colPos,int rows,int columns,int* turns)
-{
-    plankData[*rowPos][*colPos] = 0;
-    *rowPos -= 1;
-}
-
-void moveDown(int** plankData,int* rowPos,int* colPos,int rows,int columns,int* turns)
-{
-    plankData[*rowPos][*colPos] = 0;
-    *rowPos += 1;
-}
-
-void moveRight(int** plankData,int* rowPos,int* colPos,int rows,int columns,int* turns)
-{
-    if(plankData[*rowPos][*colPos] == 1)
-    {
-        plankData[*rowPos][*colPos] = 0;
-        *colPos += 1;
-        *turns += 1;
-    }
-    else
-    {
-        plankData[*rowPos][*colPos] = 0;
-        *colPos += 1;
-        *turns += 2;
-    }
-}
-
-void moveLeft(int** plankData,int* rowPos,int* colPos,int rows,int columns,int* turns)
-{
-    if(plankData[*rowPos][*colPos] == 1)
-    {
-        plankData[*rowPos][*colPos] = 0;
-        *colPos -= 1;
-        *turns += 1;
-    }
-    else
-    {
-        plankData[*rowPos][*colPos] = 0;
-        *colPos -= 1;
-        *turns += 2;
-    }
-}
-
-// FUNCTION TO MOVE JANE ALONG THE RIVER
-
-void propogateJane(int** plankData, int rowPos, int colPos, int rows, int columns, int* turns)
-{
-    if(colPos >= columns)
-    {
-        return;
-    }
-    
-    int updirection = 0;
-    int downdirection = 0;
-    int leftdirection = 0;
-    
-    updirection = checkUp(plankData, rowPos, colPos, rows, columns); // RETURN 1 ELSE 0
-    downdirection = checkDown(plankData, rowPos, colPos, rows, columns); // RETURN 1 ELSE 0
-    leftdirection = checkLeft(plankData, rowPos, colPos, rows, columns);
-
-    if(updirection == 1)
-        moveUp(plankData, &rowPos, &colPos, rows, columns, turns);
-    else if(downdirection == 1)
-        moveDown(plankData, &rowPos, &colPos, rows, columns, turns);
-    else if(leftdirection == 1)
-        moveLeft(plankData, &rowPos, &colPos, rows, columns, turns);
-    else
-        moveRight(plankData, &rowPos, &colPos, rows, columns, turns);
-    
-    propogateJane(plankData, rowPos, colPos, rows, columns, turns);
-}
-
-void psuedoOpenFile(int** plankData, FILE* fptr, int numberofRows, int numberofColumns)
-{
-    int i;
-    int j;
-    char temp;
-    for(i = 0; i < (numberofRows - 1); i++)
-    {
-        for(j = 0; j < numberofColumns; j++)
-        {
-            fscanf(fptr, "%c", &temp);
-            if(temp != '\n')
-            {
-                plankData[i][j] = temp;
-                plankData[i][j] -= 48;
-                //printf("%d ",plankData[i][j]); //Uncomment to print the matrix (FOR TESTING)
+                if(vertexCreate.top == -1)
+                {
+                    vdata->vertexStartRow[rowStart++] = j;
+                    vdata->vertexStartCol[colStart++] = i;
+                }
+                push(&vertexCreate);
             }
             else
             {
-                j--;
+                if(vertexCreate.top != -1)
+                {
+                    while(vertexCreate.top != -1)
+                    {
+                        pop(&vertexCreate);
+                    }
+                    vdata->vertexEndRow[rowEnd++] = j;
+                    vdata->vertexEndCol[colEnd++] = i;
+                }
             }
         }
-        //printf("\n"); //Uncomment to print the matrix (FOR TESTING)
     }
-
-    // Fills the last row with 0 since it can have no planks
-
-    for(j = 0; j < numberofColumns; j++)
-    {
-        plankData[numberofRows - 1][j] = 0;
-        //printf("%d ",plankData[numberofRows - 1][j]); //Uncomment to print the matrix (FOR TESTING)
-    }
-    //printf("\n")
+    free(vertexCreate.vertices);
 }
-// FUNCTION TO FIND THE NUMBER OF ROTATIONS
 
-int findNumberofRotations(int** plankData, int rows, int columns, FILE* fptr)
+int findNumberofRotations(int** plankData, int rows, int columns)
 {
     int numberofTurns = 0;
-    int tempNumberofTurns = 0;
-    int janerow = -1;
-    int janecol = -1;
-    int Rows;
-    int Columns;
-    findjaneinitalpos(plankData, &janecol, &janerow, &numberofTurns, rows, columns);
-    tempNumberofTurns = numberofTurns;
-    int i = janerow;
-    int j = janecol;
-    propogateJane(plankData, i, j, rows, columns, &numberofTurns);
-    
-    // READING FILE AGAIN TO RESET THE DATA
-    rewind(fptr);
-    fscanf(fptr, "%d", &Rows);
-    fscanf(fptr, "%d", &Columns);
-    psuedoOpenFile(plankData, fptr, rows, columns);
+    int numberofVertices = getNumberofVertices(plankData, rows, columns);
+    VertexData vertexData;
+    vertexData.vertexStartRow = malloc(sizeof(int)*numberofVertices);
+    vertexData.vertexStartCol = malloc(sizeof(int)*numberofVertices);
+    vertexData.vertexEndRow = malloc(sizeof(int)*numberofVertices);
+    vertexData.vertexEndCol = malloc(sizeof(int)*numberofVertices);
 
-    // RUNNING THE CALCULATION FOR EVERY SINGLE POSSIBLE STARTING POLE
+    setVertexData(&vertexData, plankData, rows, columns);
+    //-----------------------------TESTING-------------------------------------------
+    //printf("Number of Vertices: %d\n",numberofVertices);
+    // test for vertexdata
 
-    int initialRow = 0;
-    for(initialRow = janerow + 1; initialRow < rows; initialRow++)
+    /*int i;
+    for(i = 0; i < numberofVertices ; i++)
     {
-        if(plankData[initialRow][janecol] == 1)
-        {
-            rewind(fptr);
-            fscanf(fptr, "%d", &Rows);
-            fscanf(fptr, "%d", &Columns);
-            psuedoOpenFile(plankData, fptr, rows, columns);
-            propogateJane(plankData, initialRow, janecol, rows, columns, &tempNumberofTurns);
-            if(tempNumberofTurns < numberofTurns)
-            {
-                numberofTurns = tempNumberofTurns;
-            }
-        }
+        printf("%d",vertexData.vertexStartRow[i]);
     }
-    //---------------------------------------------------------------------------------
-    /*for(i = 0; i < rows; i++)
+    printf("\n");
+    for(i = 0; i < numberofVertices; i++)
     {
-        for(j = 0; j < columns; j++)
-        {
-            printf("%d ",plankData[i][j]);
-        }
-        printf("\n");
-    }*/
-    //--------------------------------------------------------------------------------
+        printf("%d",vertexData.vertexStartCol[i]);
+    }
+    printf("\n");
+    printf("\n");
+    for(i = 0; i < numberofVertices ; i++)
+    {
+        printf("%d",vertexData.vertexEndRow[i]);
+    }
+    printf("\n");
+    for(i = 0; i < numberofVertices; i++)
+    {
+        printf("%d",vertexData.vertexEndCol[i]);
+    }
+    printf("\n");*/
+    //-------------------------------------------------------------------------------
+
+    //freeing VertexData
+    free(vertexData.vertexStartRow);
+    free(vertexData.vertexStartCol);
+    free(vertexData.vertexEndRow);
+    free(vertexData.vertexEndCol);
     return numberofTurns;
 }
