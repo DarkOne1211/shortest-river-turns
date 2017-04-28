@@ -185,6 +185,7 @@ void pop(stack* S)
     S->top -= 1;
 }
 
+// FIND THE NUMBER OF VERTICES THE GRAPH MUST HAVE
 int getNumberofVertices(int** plankData, int rows, int columns)
 {
     int numberofVertices = 0;
@@ -220,6 +221,7 @@ int getNumberofVertices(int** plankData, int rows, int columns)
     return numberofVertices;
 }
 
+// FINDS THE STARTING AND THE ENDING POINT OF THE VERTICES
 void setVertexData(VertexData* vdata, int** plankData, int rows, int columns)
 {
     stack vertexCreate;
@@ -262,6 +264,57 @@ void setVertexData(VertexData* vdata, int** plankData, int rows, int columns)
     free(vertexCreate.vertices);
 }
 
+// finds the min of 4 numbers
+int min(int num1, int num2, int num3, int num4)
+{
+    int smallest;
+    int i;
+    int smallArray[4] = {num1, num2, num3, num4};
+    smallest = smallArray[0];
+    for(i = 0; i < 4; i++)
+    {
+        if(smallArray[i] < smallest)
+        {
+            smallest = smallArray[i];
+        }
+    }
+    return smallest;
+}
+
+// SETS AN EDGE WEIGHT OF FOR EACH EDGE
+int** createEdgeMatrix(VertexData vdata, int totalnodes)
+{
+    int i;
+    int j;
+    int** edgeWeight;
+    edgeWeight = malloc(totalnodes * sizeof(int*));
+    for(i = 0; i < totalnodes; i++)
+    {
+        edgeWeight[i] = malloc(totalnodes * sizeof(int));
+    }
+    for(i = 0; i < totalnodes; i++)
+    {
+        for(j = 0; j < totalnodes; j++)
+        {
+            if(i == j)
+            {
+                edgeWeight[i][j] = 0;
+            }
+            else
+            {
+                int diff1 = abs(vdata.vertexStartRow[i] - vdata.vertexStartRow[j]);
+                int diff2 = abs(vdata.vertexStartRow[i] - vdata.vertexEndRow[j]);
+                int diff3 = abs(vdata.vertexEndRow[i] - vdata.vertexStartRow[j]);
+                int diff4 = abs(vdata.vertexEndRow[i] - vdata.vertexEndRow[j]);
+                int rowdiff = min(diff1, diff2, diff3, diff4);
+                int coldiff = abs(i - j);
+                edgeWeight[i][j] = (2 * rowdiff) + (2 * coldiff) + (rowdiff & 1) + (coldiff & 1); 
+            }
+        }
+    }
+    return edgeWeight;
+}
+
 int findNumberofRotations(int** plankData, int rows, int columns)
 {
     int numberofTurns = 0;
@@ -273,12 +326,14 @@ int findNumberofRotations(int** plankData, int rows, int columns)
     vertexData.vertexEndCol = malloc(sizeof(int)*numberofVertices);
 
     setVertexData(&vertexData, plankData, rows, columns);
+    int** EdgeWeights = createEdgeMatrix(vertexData, numberofVertices);
     //-----------------------------TESTING-------------------------------------------
     //printf("Number of Vertices: %d\n",numberofVertices);
     // test for vertexdata
 
-    /*int i;
-    for(i = 0; i < numberofVertices ; i++)
+    int i;
+    int j;
+    /*for(i = 0; i < numberofVertices ; i++)
     {
         printf("%d",vertexData.vertexStartRow[i]);
     }
@@ -299,6 +354,16 @@ int findNumberofRotations(int** plankData, int rows, int columns)
         printf("%d",vertexData.vertexEndCol[i]);
     }
     printf("\n");*/
+
+    // printing edgeWeights
+    for(i = 0; i < numberofVertices; i++)
+    {
+        for(j = 0; j < numberofVertices; j++)
+        {
+            printf("%d  ",EdgeWeights[i][j]);
+        }
+        printf("\n");
+    }
     //-------------------------------------------------------------------------------
 
     //freeing VertexData
@@ -306,5 +371,6 @@ int findNumberofRotations(int** plankData, int rows, int columns)
     free(vertexData.vertexStartCol);
     free(vertexData.vertexEndRow);
     free(vertexData.vertexEndCol);
+    freeData(EdgeWeights, numberofVertices, numberofVertices);
     return numberofTurns;
 }

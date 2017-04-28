@@ -34,6 +34,7 @@ typedef struct _VERTEX_DATA
 
 }VertexData;
 
+
 // CALCULATES THE LEAST NUMBER OF ROTATIONS
 int leastplankRotations(char *filename);
 #endif
