@@ -4,6 +4,7 @@
 typedef struct AdjListNode
 {
     int adjecent;
+    int weight;
     struct AdjListNode* next;
 }AdjListNode;
 
@@ -33,8 +34,7 @@ typedef struct _VERTEX_DATA
     int* vertexEndCol;
 
 }VertexData;
-
-
+ 
 // CALCULATES THE LEAST NUMBER OF ROTATIONS
 int leastplankRotations(char *filename);
 #endif

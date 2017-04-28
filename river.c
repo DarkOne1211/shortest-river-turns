@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <stdbool.h>
 
 // FUNCTION DECLARATIONS
 int** openFile(FILE* fptr, int numberofRows, int numberofColumns);
@@ -95,82 +96,6 @@ void freeData(int** plankData,int numberofRows, int numberofColumns)
     free(plankData);
 }
 
-// Graph functions
-// Creating a new Adjecent List node
-AdjListNode* newAdjListNode(int dest)
-{
-    AdjListNode* newNode = malloc(sizeof(AdjListNode));
-    newNode->adjecent = dest;
-    newNode->next = NULL;
-    return newNode;
-}
-
-// Creating a new Graph
-Graph* createGraph(int V)
-{
-    Graph* newGraph = malloc(sizeof(Graph));
-    newGraph->vertex = V;
-
-    newGraph->array = malloc(V * sizeof(AdjList));
-    
-    // Initializing each array element as NULL in the graph
-    int AdjListCounter = 0;
-    for(AdjListCounter = 0; AdjListCounter < V; AdjListCounter++)
-    {
-        newGraph->array[AdjListCounter].head = NULL;
-    }
-    return newGraph;
-}
-
-void insertEdge(Graph* graph, int src, int dest)
-{
-    // Add an edge that points from source to destination or <u,v>
-    AdjListNode* newNode = newAdjListNode(dest);
-    newNode->next = graph->array[src].head;
-    graph->array[src].head = newNode;
-
-    // UNCOMMENT IF YOU WANT THE GRAPH TO BE UNDIRECTIONAL
-    /*newNode = newAdjListNode(src);
-    newNode->next = graph->array[dest].head;
-    graph->array[dest].head = newNode;*/
-}
-
-
-void freeGraph(Graph* freeGraph)
-{
-    int vertex = 0;
-    for(vertex = 0; vertex < freeGraph->vertex; vertex++)
-    {
-        while(freeGraph->array[vertex].head != NULL)
-        {
-            AdjListNode* temp = freeGraph->array[vertex].head;
-            freeGraph->array[vertex].head = temp->next;
-            free(temp);
-        }
-    }
-    free(freeGraph->array);
-    free(freeGraph);
-
-}
-
-// Printing the graph. CREATED FOR TESTING PURPOSES
-//-------------------- TEST-------------------------
-void printGraph(Graph* graph)
-{
-    int v;
-    for (v = 0; v < graph->vertex; ++v)
-    {
-        struct AdjListNode* pCrawl = graph->array[v].head;
-        printf("\n Adjacency list of vertex %d\n head ", v);
-        while (pCrawl)
-        {
-            printf("-> %d", pCrawl->adjecent);
-            pCrawl = pCrawl->next;
-        }
-        printf("\n");
-    }
-}
-//-----------------------TEST------------------------
 
 // STACK OPERATIONS
 
@@ -263,12 +188,12 @@ void setVertexData(VertexData* vdata, int** plankData, int rows, int columns)
     }
     vdata->vertexStartRow[0] = 0;
     vdata->vertexStartCol[0] = 0;
-    vdata->vertexEndRow[0] = 0;
-    vdata->vertexEndCol[0] = rows;
+    vdata->vertexEndRow[0] = rows - 1;
+    vdata->vertexEndCol[0] = 0;
     vdata->vertexStartRow[rowStart] = 0;
-    vdata->vertexStartCol[colStart] = columns;
-    vdata->vertexEndRow[rowStart] = rows;
-    vdata->vertexEndCol[colStart] = columns;
+    vdata->vertexStartCol[colStart] = columns + 1;
+    vdata->vertexEndRow[rowStart] = rows - 1;
+    vdata->vertexEndCol[colStart] = columns + 1;
     free(vertexCreate.vertices);
 }
 
@@ -300,9 +225,11 @@ int** createEdgeMatrix(VertexData vdata, int totalnodes)
     {
         edgeWeight[i] = malloc(totalnodes * sizeof(int));
     }
-    for(i = 1; i < totalnodes - 1; i++)
+
+    // SETTING THE WEIGHTS FOR THE GRAPH
+    for(i = 0; i < totalnodes; i++)
     {
-        for(j = 1; j < totalnodes - 1; j++)
+        for(j = 0; j < totalnodes; j++)
         {
             if(i == j)
             {
@@ -325,34 +252,73 @@ int** createEdgeMatrix(VertexData vdata, int totalnodes)
         }
     }
 
-    // SETTING THE WEIGHTS OF THE EDGES FROM THE LEFT BACK AND NODES TO THE RIGHT BANK
-    edgeWeight[0][0] = 0;
-    edgeWeight[totalnodes - 1][totalnodes - 1] = 0;
-    int firstPlank = vdata.vertexStartCol[1];
-    for(j = 1; j < totalnodes; j++)
-    {
-        if(vdata.vertexStartCol[j] == firstPlank)
-        {
-            edgeWeight[0][j] = 2 * firstPlank - 2;
-        }
-        else
-        {
-            edgeWeight[0][j] = 0;   
-        }
-    }
-    int lastPlank = vdata.vertexStartCol[totalnodes - 2];
-    for(j = 0; j < totalnodes - 1; j++)
-    {
-        if(vdata.vertexStartCol[j] == lastPlank)
-        {
-            edgeWeight[totalnodes - 1][j] = 2 * abs(lastPlank - vdata.vertexStartCol[j]) - 2;
-        }
-        else
-        {
-            edgeWeight[totalnodes - 1][j] = 0;   
-        }
-    }
+    
     return edgeWeight;
+}
+
+int minDistance(int* dist, bool* sptSet, int V)
+{
+   // Initialize min value
+    int min = INT_MAX, min_index;
+  
+    for (int v = 0; v < V; v++)
+     if (sptSet[v] == false && dist[v] <= min)
+         min = dist[v], min_index = v;
+  
+    return min_index;
+}
+  
+// A utility function to print the constructed distance array
+int printSolution(int* dist, int n)
+{
+    int V = n;
+    printf("Vertex   Distance from Source\n");
+    for (int i = 0; i < V; i++)
+      printf("%d \t\t %d\n", i, dist[i]);
+    return 0;
+}
+  
+// Funtion that implements Dijkstra's single source shortest path algorithm
+// for a graph represented using adjacency matrix representation
+int dijkstra(int** graph, int src, int totalnodes)
+{
+     int V = totalnodes;
+     int* dist = malloc(sizeof(int)*totalnodes);     // The output array.  dist[i] will hold the shortest
+                      // distance from src to i
+  
+     bool* sptSet = malloc(sizeof(bool)*totalnodes); // sptSet[i] will true if vertex i is included in shortest
+                     // path tree or shortest distance from src to i is finalized
+  
+     // Initialize all distances as INFINITE and stpSet[] as false
+     for (int i = 0; i < V; i++)
+        dist[i] = INT_MAX, sptSet[i] = false;
+  
+     // Distance of source vertex from itself is always 0
+     dist[src] = 0;
+  
+     // Find shortest path for all vertices
+     for (int count = 0; count < V-1; count++)
+     {
+       // Pick the minimum distance vertex from the set of vertices not
+       // yet processed. u is always equal to src in first iteration.
+       int u = minDistance(dist, sptSet, totalnodes);
+  
+       // Mark the picked vertex as processed
+       sptSet[u] = true;
+  
+       // Update dist value of the adjacent vertices of the picked vertex.
+       for (int v = 0; v < V; v++)
+         if (!sptSet[v] && graph[u][v] && dist[u] != INT_MAX 
+                                       && dist[u]+graph[u][v] < dist[v])
+            dist[v] = dist[u] + graph[u][v];
+     }
+  
+     // print the constructed distance array
+     //printSolution(dist, V);
+     int turns = dist[V - 2];
+     free(dist);
+     free(sptSet);
+     return turns;
 }
 
 int findNumberofRotations(int** plankData, int rows, int columns)
@@ -368,44 +334,7 @@ int findNumberofRotations(int** plankData, int rows, int columns)
 
     setVertexData(&vertexData, plankData, rows, columns);
     int** EdgeWeights = createEdgeMatrix(vertexData, numberofVertices);
-    //-----------------------------TESTING-------------------------------------------
-    //printf("Number of Vertices: %d\n",numberofVertices);
-    // test for vertexdata
-
-    int i;
-    int j;
-    for(i = 0; i < numberofVertices ; i++)
-    {
-        printf("%d",vertexData.vertexStartRow[i]);
-    }
-    printf("\n");
-    for(i = 0; i < numberofVertices; i++)
-    {
-        printf("%d",vertexData.vertexStartCol[i]);
-    }
-    printf("\n");
-    printf("\n");
-    for(i = 0; i < numberofVertices ; i++)
-    {
-        printf("%d",vertexData.vertexEndRow[i]);
-    }
-    printf("\n");
-    for(i = 0; i < numberofVertices; i++)
-    {
-        printf("%d",vertexData.vertexEndCol[i]);
-    }
-    printf("\n");
-
-    // printing edgeWeights
-    for(i = 0; i < numberofVertices; i++)
-    {
-        for(j = 0; j < numberofVertices; j++)
-        {
-            printf("%d  ",EdgeWeights[i][j]);
-        }
-        printf("\n");
-    }
-    //-------------------------------------------------------------------------------
+    numberofTurns = dijkstra(EdgeWeights,0 ,numberofVertices);
 
     //freeing VertexData
     free(vertexData.vertexStartRow);
