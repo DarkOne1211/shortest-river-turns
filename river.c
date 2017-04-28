@@ -228,10 +228,10 @@ void setVertexData(VertexData* vdata, int** plankData, int rows, int columns)
     vertexCreate.vertices = malloc(sizeof(int)*rows*columns);
     vertexCreate.top = -1;
     vertexCreate.MAXSIZE = rows*columns;
-    int rowStart = 0;
-    int colStart = 0;
-    int rowEnd = 0;
-    int colEnd = 0;
+    int rowStart = 1;
+    int colStart = 1;
+    int rowEnd = 1;
+    int colEnd = 1;
     int i;
     int j;
     for(i = 0; i < columns; i++)
@@ -243,7 +243,7 @@ void setVertexData(VertexData* vdata, int** plankData, int rows, int columns)
                 if(vertexCreate.top == -1)
                 {
                     vdata->vertexStartRow[rowStart++] = j;
-                    vdata->vertexStartCol[colStart++] = i;
+                    vdata->vertexStartCol[colStart++] = i + 1;
                 }
                 push(&vertexCreate);
             }
@@ -256,11 +256,19 @@ void setVertexData(VertexData* vdata, int** plankData, int rows, int columns)
                         pop(&vertexCreate);
                     }
                     vdata->vertexEndRow[rowEnd++] = j;
-                    vdata->vertexEndCol[colEnd++] = i;
+                    vdata->vertexEndCol[colEnd++] = i + 1;
                 }
             }
         }
     }
+    vdata->vertexStartRow[0] = 0;
+    vdata->vertexStartCol[0] = 0;
+    vdata->vertexEndRow[0] = 0;
+    vdata->vertexEndCol[0] = rows;
+    vdata->vertexStartRow[rowStart] = 0;
+    vdata->vertexStartCol[colStart] = columns;
+    vdata->vertexEndRow[rowStart] = rows;
+    vdata->vertexEndCol[colStart] = columns;
     free(vertexCreate.vertices);
 }
 
@@ -292,9 +300,9 @@ int** createEdgeMatrix(VertexData vdata, int totalnodes)
     {
         edgeWeight[i] = malloc(totalnodes * sizeof(int));
     }
-    for(i = 0; i < totalnodes; i++)
+    for(i = 1; i < totalnodes - 1; i++)
     {
-        for(j = 0; j < totalnodes; j++)
+        for(j = 1; j < totalnodes - 1; j++)
         {
             if(i == j)
             {
@@ -307,9 +315,41 @@ int** createEdgeMatrix(VertexData vdata, int totalnodes)
                 int diff3 = abs(vdata.vertexEndRow[i] - vdata.vertexStartRow[j]);
                 int diff4 = abs(vdata.vertexEndRow[i] - vdata.vertexEndRow[j]);
                 int rowdiff = min(diff1, diff2, diff3, diff4);
-                int coldiff = abs(i - j);
-                edgeWeight[i][j] = (2 * rowdiff) + (2 * coldiff) + (rowdiff & 1) + (coldiff & 1); 
+                if((vdata.vertexStartRow[i] < vdata.vertexStartRow[j] && vdata.vertexEndRow[i] > vdata.vertexStartRow[j]) || (vdata.vertexStartRow[i] < vdata.vertexEndRow[j] && vdata.vertexEndRow[i] > vdata.vertexEndRow[j]))
+                {
+                    rowdiff = 0;
+                }
+                int coldiff = abs(vdata.vertexStartCol[i] - vdata.vertexStartCol[j]);
+                edgeWeight[i][j] = (2 * rowdiff) + (2 * coldiff) - (rowdiff && 1) - (coldiff && 1); 
             }
+        }
+    }
+
+    // SETTING THE WEIGHTS OF THE EDGES FROM THE LEFT BACK AND NODES TO THE RIGHT BANK
+    edgeWeight[0][0] = 0;
+    edgeWeight[totalnodes - 1][totalnodes - 1] = 0;
+    int firstPlank = vdata.vertexStartCol[1];
+    for(j = 1; j < totalnodes; j++)
+    {
+        if(vdata.vertexStartCol[j] == firstPlank)
+        {
+            edgeWeight[0][j] = 2 * firstPlank - 2;
+        }
+        else
+        {
+            edgeWeight[0][j] = 0;   
+        }
+    }
+    int lastPlank = vdata.vertexStartCol[totalnodes - 2];
+    for(j = 0; j < totalnodes - 1; j++)
+    {
+        if(vdata.vertexStartCol[j] == lastPlank)
+        {
+            edgeWeight[totalnodes - 1][j] = 2 * abs(lastPlank - vdata.vertexStartCol[j]) - 2;
+        }
+        else
+        {
+            edgeWeight[totalnodes - 1][j] = 0;   
         }
     }
     return edgeWeight;
@@ -319,6 +359,7 @@ int findNumberofRotations(int** plankData, int rows, int columns)
 {
     int numberofTurns = 0;
     int numberofVertices = getNumberofVertices(plankData, rows, columns);
+    numberofVertices += 2;
     VertexData vertexData;
     vertexData.vertexStartRow = malloc(sizeof(int)*numberofVertices);
     vertexData.vertexStartCol = malloc(sizeof(int)*numberofVertices);
@@ -333,7 +374,7 @@ int findNumberofRotations(int** plankData, int rows, int columns)
 
     int i;
     int j;
-    /*for(i = 0; i < numberofVertices ; i++)
+    for(i = 0; i < numberofVertices ; i++)
     {
         printf("%d",vertexData.vertexStartRow[i]);
     }
@@ -353,7 +394,7 @@ int findNumberofRotations(int** plankData, int rows, int columns)
     {
         printf("%d",vertexData.vertexEndCol[i]);
     }
-    printf("\n");*/
+    printf("\n");
 
     // printing edgeWeights
     for(i = 0; i < numberofVertices; i++)
@@ -371,6 +412,7 @@ int findNumberofRotations(int** plankData, int rows, int columns)
     free(vertexData.vertexStartCol);
     free(vertexData.vertexEndRow);
     free(vertexData.vertexEndCol);
+    //freeing the edge matrix
     freeData(EdgeWeights, numberofVertices, numberofVertices);
     return numberofTurns;
 }
